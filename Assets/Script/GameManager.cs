@@ -1,168 +1,141 @@
 using UnityEngine;
-using UnityEngine.UI; // ถ้าใช้ Text Mesh Pro ให้เปลี่ยนเป็น using TMPro;
-using UnityEngine.SceneManagement;
-using TMPro;
+using UnityEngine.UI;
+using UnityEngine.Events; // สำคัญมากสำหรับเชื่อม Fungus
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
 
-    [Header("Game Settings")]
-    public int currentPhase = 1;
-    public float timeRemaining = 60f; // เวลาเริ่มต้น Phase 1
-    public bool isGameOver = false;
+    [Header("Status")]
+    public int currentPhase = 0;
+    public float timer = 0f;
+    public bool isTimerRunning = false;
+    public int burnedCount = 0;
+    public int requiredCount = 0;
 
-    [Header("Objectives")]
-    public int flowersBurnedInPhase = 0;
-    public int flowersRequiredInPhase = 3;
+    [Header("Environment Groups")]
+    public GameObject[] phase1Flowers; // ทานตะวัน
+    public GameObject[] phase2Flowers; // ทิวลิปม่วง
+    public GameObject[] phase3Flowers; // กุหลาบ
+    public GameObject[] phase4Flowers; // ฮิกันบานะ
+    // ลากกลุ่ม GameObject ของแต่ละ Phase มาใส่เพื่อสั่ง เปิด/ปิด
 
-    [Header("UI References")]
-    public TextMeshProUGUI timerText;       // ลาก UI Text มาใส่
-    public TextMeshProUGUI objectiveText;   // ลาก UI Text มาใส่ (เช่น "Burned: 0/3")
-    public TextMeshProUGUI phaseText;       // ลาก UI Text มาใส่ (บอก Phase ปัจจุบัน)
-    public GameObject gameOverPanel; // Panel ที่จะเด้งตอนแพ้
-    public GameObject winPanel;      // Panel ที่จะเด้งตอนชนะ
+    [Header("UI")]
+    public Text timerText;
+    public Text objectiveText;
 
-    [Header("Environment Controls")]
-    public GameObject[] phase1Objects; // ลาก Parent ของดอกไม้ Phase 1 มาใส่
-    public GameObject[] phase2Objects;
-    public GameObject[] phase3Objects;
-    public GameObject[] phase4Objects;
+    [Header("Fungus Events (Liaison)")]
+    // ลาก Flowchart Block มาใส่ในช่องพวกนี้ที่ Inspector
+    public UnityEvent onPhase1Complete; 
+    public UnityEvent onPhase2Complete;
+    public UnityEvent onPhase3Complete;
+    public UnityEvent onPhase4Complete; 
+    public UnityEvent onGameOver;
 
     void Awake()
     {
         Instance = this;
     }
 
-    void Start()
-    {
-        StartPhase(1);
-    }
-
     void Update()
     {
-        if (isGameOver) return;
-
-        // Timer Logic
-        if (timeRemaining > 0)
+        if (isTimerRunning)
         {
-            timeRemaining -= Time.deltaTime;
+            timer -= Time.deltaTime;
             UpdateUI();
-        }
-        else
-        {
-            GameOver("Time Out!");
+
+            if (timer <= 0)
+            {
+                timer = 0;
+                isTimerRunning = false;
+                onGameOver.Invoke(); // สั่งจบเกม (Game Over)
+            }
         }
     }
 
     void UpdateUI()
     {
-        // ถ้าใช้ TextMeshPro ให้เปลี่ยน .text เป็นคำสั่งของ TMP
-        if(timerText) timerText.text = "Time: " + Mathf.CeilToInt(timeRemaining).ToString();
-        if(objectiveText) objectiveText.text = "Flowers Burned: " + flowersBurnedInPhase + "/" + flowersRequiredInPhase;
-        if(phaseText) phaseText.text = "Phase: " + currentPhase;
+        if(timerText) timerText.text = Mathf.Ceil(timer).ToString();
+        if(objectiveText) objectiveText.text = $"{burnedCount} / {requiredCount}";
     }
 
-    public void BurnFlower(int flowerPhase)
+    // ฟังก์ชันนี้จะถูกเรียกจาก InteractableFlower
+    public void OnFlowerBurned(int flowerPhase)
     {
         // เช็คว่าเผาถูก Phase หรือไม่
         if (flowerPhase == currentPhase)
         {
-            flowersBurnedInPhase++;
-            
-            // เช็คว่าครบหรือยัง
-            if (flowersBurnedInPhase >= flowersRequiredInPhase)
+            burnedCount++;
+            UpdateUI();
+
+            if (burnedCount >= requiredCount)
             {
-                NextPhase();
+                CompleteCurrentPhase();
             }
         }
     }
 
-    void StartPhase(int phase)
+    void CompleteCurrentPhase()
+    {
+        isTimerRunning = false; // หยุดเวลา
+        
+        // สั่ง Fungus ให้เล่น Cutscene ตาม Phase
+        switch (currentPhase)
+        {
+            case 1: onPhase1Complete.Invoke(); break;
+            case 2: onPhase2Complete.Invoke(); break;
+            case 3: onPhase3Complete.Invoke(); break;
+            case 4: onPhase4Complete.Invoke(); break; // จบเกม (Win)
+        }
+    }
+
+    // --- ฟังก์ชันสำหรับให้ Fungus เรียกใช้ (Invoke Method) ---
+
+    // เรียกเมื่อเริ่มเกม หรือเริ่ม Phase ใหม่
+    public void StartPhase(int phase)
     {
         currentPhase = phase;
-        flowersBurnedInPhase = 0;
+        burnedCount = 0;
+        
+        // Reset Map (ปิดทั้งหมดก่อน)
+        SetObjects(phase1Flowers, false);
+        SetObjects(phase2Flowers, false);
+        SetObjects(phase3Flowers, false);
+        SetObjects(phase4Flowers, false);
 
-        // ตั้งค่าแต่ละ Phase
+        // Setup แต่ละ Phase
         switch (phase)
         {
-            case 1:
-                timeRemaining = 60f;
-                flowersRequiredInPhase = 3;
-                SetObjectsActive(phase1Objects, true);
+            case 1: // ทานตะวัน 3 ดอก
+                requiredCount = 3;
+                timer = 60f;
+                SetObjects(phase1Flowers, true);
                 break;
-            case 2:
-                timeRemaining = 90f;
-                flowersRequiredInPhase = 3; // หรือ 4 ตามโจทย์
-                SetObjectsActive(phase1Objects, false); // ปิดของเก่า
-                SetObjectsActive(phase2Objects, true);
-                // TODO: ใส่ Code เปลี่ยนแสง/Post Processing ตรงนี้
+            case 2: // ทิวลิป 4 ดอก (มืด)
+                requiredCount = 4;
+                timer = 90f;
+                SetObjects(phase2Flowers, true);
+                // TODO: ใส่ Code เปลี่ยนแสงเป็นมืดตรงนี้
                 break;
-            case 3:
-                timeRemaining = 120f;
-                flowersRequiredInPhase = 3;
-                SetObjectsActive(phase2Objects, false);
-                SetObjectsActive(phase3Objects, true);
+            case 3: // กุหลาบ 4 ดอก (สลับมั่ว)
+                requiredCount = 4;
+                timer = 120f;
+                SetObjects(phase3Flowers, true);
                 break;
-            case 4:
-                timeRemaining = 180f;
-                flowersRequiredInPhase = 1; // Boss/Ending logic
-                SetObjectsActive(phase3Objects, false);
-                SetObjectsActive(phase4Objects, true);
-                break;
-            case 5:
-                GameWin();
+            case 4: // ฮิกันบานะ 1 ดอก (ชั้น 1)
+                requiredCount = 1;
+                timer = 180f;
+                SetObjects(phase4Flowers, true);
+                // TODO: ใส่ Code ปิดบันได/ไฟไหม้
                 break;
         }
+
+        isTimerRunning = true;
+        UpdateUI();
     }
 
-    void NextPhase()
+    void SetObjects(GameObject[] objs, bool active)
     {
-        StartPhase(currentPhase + 1);
+        foreach (var o in objs) if(o) o.SetActive(active);
     }
-
-    void SetObjectsActive(GameObject[] objs, bool state)
-    {
-        foreach (var obj in objs)
-        {
-            if(obj != null) obj.SetActive(state);
-        }
-    }
-
-    public void GameOver(string reason)
-    {
-        isGameOver = true;
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-        if(gameOverPanel) gameOverPanel.SetActive(true);
-        Debug.Log("Game Over: " + reason);
-    }
-
-    public void GameWin()
-    {
-        isGameOver = true;
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-        if(winPanel) winPanel.SetActive(true);
-    }
-    
-    // ไว้กดปุ่ม Restart
-    public void RestartGame()
-    {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
-    public void StartBossFight()
-{
-    Debug.Log("Boss Fight Started!");
-    // ย้าย Player ไปจุดเริ่ม หรือ Reset บรรยากาศ
-    StartPhase(1); // เริ่ม Phase 1 ตาม code เดิม
-}
-
-// เพิ่ม Function สำหรับ Intro (เรียกตอนเริ่มเกม)
-public void StartIntroSequence()
-{
-    // 1. แสดง Canvas รูปโทรศัพท์
-    // 2. รอเวลา 5 วิ
-    // 3. ปิดรูป -> ตื่นในห้องเรียน
-}
 }

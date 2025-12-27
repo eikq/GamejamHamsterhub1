@@ -1,40 +1,40 @@
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine.UI; // ถ้าใช้ Text Mesh Pro ให้เปลี่ยนเป็น TMPro
 
 public class PlayerInteraction : MonoBehaviour
 {
-    public float interactRange = 3.0f;
-    public LayerMask interactLayer; // เลือก Layer ของดอกไม้
-    public Camera playerCamera;
-    public TextMeshProUGUI interactText; // ลาก UI Text เช่น "Press E to Burn" มาใส่
+    [Header("Settings")]
+    public float range = 3.0f;
+    public LayerMask flowerLayer;
+    public KeyCode interactKey = KeyCode.E;
+
+    [Header("UI")]
+    public Text interactText; // ลาก Text "Press E to Burn" มาใส่
+    public Camera cam;
 
     void Update()
     {
+        // ยิง Raycast
         RaycastHit hit;
-        // ยิง Ray จากกลางจอ
-        if (Physics.Raycast(playerCamera.transform.position, playerCamera.transform.forward, out hit, interactRange, interactLayer))
+        bool isHit = Physics.Raycast(cam.transform.position, cam.transform.forward, out hit, range, flowerLayer);
+
+        if (isHit)
         {
-            // ถ้าเจอวัตถุที่มี Script FlowerObject
-            FlowerObject flower = hit.collider.GetComponent<FlowerObject>();
+            InteractableFlower flower = hit.collider.GetComponent<InteractableFlower>();
             if (flower != null)
             {
-                if(interactText) interactText.gameObject.SetActive(true);
-                if(interactText) interactText.text = "Press [E] to Burn";
+                if(interactText) interactText.enabled = true;
+                if(interactText) interactText.text = "เผา [E]";
 
-                if (Input.GetKeyDown(KeyCode.E))
+                if (Input.GetKeyDown(interactKey))
                 {
                     flower.Burn();
                 }
-            }
-            else
-            {
-                if(interactText) interactText.gameObject.SetActive(false);
+                return; // จบการทำงานรอบนี้
             }
         }
-        else
-        {
-            if(interactText) interactText.gameObject.SetActive(false);
-        }
+
+        // ถ้าไม่เจออะไรเลย
+        if(interactText) interactText.enabled = false;
     }
 }

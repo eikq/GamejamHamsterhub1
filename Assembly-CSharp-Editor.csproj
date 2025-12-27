@@ -1318,6 +1318,12 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="Assembly-CSharp.csproj" />
+    <ProjectReference Include="Fungus.FungusLuaEditor.csproj" />
+    <ProjectReference Include="Fungus.UsfxrEditor.csproj" />
+    <ProjectReference Include="FungusEditor.csproj" />
+    <ProjectReference Include="Fungus.LineEndingsEditor.csproj" />
+    <ProjectReference Include="Fungus.csproj" />
+    <ProjectReference Include="Fungus.FungusLuaJSONCheckerEditor.csproj" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
   <ItemGroup>
