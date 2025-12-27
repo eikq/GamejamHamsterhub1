@@ -151,4 +151,18 @@ public class GameManager : MonoBehaviour
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
+    public void StartBossFight()
+{
+    Debug.Log("Boss Fight Started!");
+    // ย้าย Player ไปจุดเริ่ม หรือ Reset บรรยากาศ
+    StartPhase(1); // เริ่ม Phase 1 ตาม code เดิม
+}
+
+// เพิ่ม Function สำหรับ Intro (เรียกตอนเริ่มเกม)
+public void StartIntroSequence()
+{
+    // 1. แสดง Canvas รูปโทรศัพท์
+    // 2. รอเวลา 5 วิ
+    // 3. ปิดรูป -> ตื่นในห้องเรียน
+}
 }
